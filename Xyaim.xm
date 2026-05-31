@@ -1,4 +1,4 @@
-// Xyaim - 最终完整修复版
+// Xyaim - 最终完整版（无 keyWindow 警告）
 #import <UIKit/UIKit.h>
 #import <substrate.h>
 #import <objc/runtime.h>
@@ -327,18 +327,6 @@ static void closePanel() {
     if (settingsPanel) settingsPanel.hidden = YES;
 }
 
-static void toggleAim(UISwitch *sw) {
-    aimEnabled = sw.on;
-}
-
-static void fovChanged(UISlider *slider) {
-    userFov = slider.value;
-}
-
-static void predChanged(UISlider *slider) {
-    userPred = slider.value / 100.0;
-}
-
 static void closePanelTapped() {
     closePanel();
 }
@@ -411,19 +399,20 @@ static void showSettingsPanel() {
         [predSliderControl addTarget:predSliderControl action:@selector(predChangedTriggered:) forControlEvents:UIControlEventValueChanged];
         [settingsPanel addSubview:predSliderControl];
         
-        // 🔥 彻底修复 keyWindow
-        UIWindow *keyWindow = nil;
+        // 🔥 无 keyWindow 警告的写法
+        UIWindow *activeWindow = nil;
         if (@available(iOS 13.0, *)) {
             for (UIWindowScene *scene in [UIApplication sharedApplication].connectedScenes) {
                 if (scene.activationState == UISceneActivationStateForegroundActive) {
-                    keyWindow = scene.windows.firstObject;
+                    activeWindow = scene.windows.firstObject;
                     break;
                 }
             }
-        } else {
-            keyWindow = [UIApplication sharedApplication].keyWindow;
         }
-        [keyWindow addSubview:settingsPanel];
+        if (!activeWindow) {
+            activeWindow = [UIApplication sharedApplication].windows.firstObject;
+        }
+        [activeWindow addSubview:settingsPanel];
     } else {
         settingsPanel.hidden = NO;
     }
