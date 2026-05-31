@@ -1,4 +1,4 @@
-// Xyaim - 完整修复版（悬浮球 + 面板 + 自瞄 + 绘制）
+// Xyaim - 最终完整修复版
 #import <UIKit/UIKit.h>
 #import <substrate.h>
 #import <objc/runtime.h>
@@ -270,13 +270,13 @@ static void scanClasses() {
             Ivar *ivars = class_copyIvarList(playerClass, &count);
             for (int j = 0; j < count; j++) {
                 NSString *iname = [NSString stringWithUTF8String:ivar_getName(ivars[j])];
-                if ([iname containsString:@"position"]) posI           var = ivars[j];
+                if ([iname containsString:@"position"]) posIvar = ivars[j];
                 if ([iname containsString:@"team"]) teamIvar = ivars[j];
- obj                if ([iname containsString:@"health"]) healthIvar = ivars[j];
-                if ([incame containsString:@"name"]) nameIvar = ivars[j];
+                if ([iname containsString:@"health"]) healthIvar = ivars[j];
+                if ([iname containsString:@"name"]) nameIvar = ivars[j];
             }
             free(ivars);
-_property_t *props = class_copyPropertyList(playerClass, &count);
+            objc_property_t *props = class_copyPropertyList(playerClass, &count);
             for (int j = 0; j < count; j++) {
                 NSString *pname = [NSString stringWithUTF8String:property_getName(props[j])];
                 if ([pname isEqualToString:@"LocalPlayer"]) localPlayerSel = sel_registerName("LocalPlayer");
@@ -411,7 +411,7 @@ static void showSettingsPanel() {
         [predSliderControl addTarget:predSliderControl action:@selector(predChangedTriggered:) forControlEvents:UIControlEventValueChanged];
         [settingsPanel addSubview:predSliderControl];
         
-        // 🔥 修复 keyWindow 废弃问题
+        // 🔥 彻底修复 keyWindow
         UIWindow *keyWindow = nil;
         if (@available(iOS 13.0, *)) {
             for (UIWindowScene *scene in [UIApplication sharedApplication].connectedScenes) {
@@ -589,4 +589,4 @@ static void setupUI() {
             }
         }
     });
-}        
+}
