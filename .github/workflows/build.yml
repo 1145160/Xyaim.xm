@@ -1,0 +1,26 @@
+name: Build XyAim dylib
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Theos
+        run: |
+          git clone --recursive https://github.com/theos/theos.git $HOME/theos
+          echo "$HOME/theos/bin" >> $GITHUB_PATH
+          echo "THEOS=$HOME/theos" >> $GITHUB_ENV
+
+      - name: Build tweak
+        run: |
+          make package
+
+      - name: Upload deb
+        uses: actions/upload-artifact@v4
+        with:
+          name: XyAim.deb
+          path: packages/*.deb
