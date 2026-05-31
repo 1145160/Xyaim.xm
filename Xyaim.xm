@@ -1,4 +1,4 @@
-// Xyaim - 完整版（自瞄 + 绘制 + 悬浮面板）
+// Xyaim - 完整修复版（悬浮球 + 面板）
 #import <UIKit/UIKit.h>
 #import <substrate.h>
 #import <objc/runtime.h>
@@ -8,7 +8,6 @@
 #define SCREEN_WIDTH [UIScreen mainScreen].bounds.size.width
 #define SCREEN_HEIGHT [UIScreen mainScreen].bounds.size.height
 
-// ==================== 配置结构 ====================
 typedef struct {
     float bulletSpeed;
     float gravity;
@@ -21,7 +20,6 @@ static ModeConfig shotgunMode = {450, 14.0, 0.85, [UIColor orangeColor], @"霰�
 static ModeConfig sniperMode = {1200, 5.0, 0.98, [UIColor cyanColor], @"狙击"};
 static ModeConfig currentConfig;
 
-// ==================== 全局变量 ====================
 static id localPlayer = nil;
 static int localTeamId = -1;
 static float currentYaw = 0, currentPitch = 0;
@@ -53,7 +51,6 @@ static int visibleEnemies = 0;
 static UIWindow *overlayWindow = nil;
 static UIView *drawView = nil;
 
-// 悬浮面板相关
 static UIWindow *floatWindow = nil;
 static UIButton *floatButton = nil;
 static UIView *settingsPanel = nil;
@@ -66,7 +63,6 @@ static float userPred = 0.92;
 
 typedef struct { float x, y, z; } Vector3;
 
-// ==================== 工具函数 ====================
 static Vector3 getPosition(id obj) {
     if (!obj || !posIvar) return (Vector3){0};
     id val = object_getIvar(obj, posIvar);
@@ -154,11 +150,10 @@ static Vector3 getVelocity(id obj, Vector3 cur) {
         velCache[key] = @{@"pos": [NSValue valueWithBytes:&cur objCType:@encode(Vector3)], @"time": @(now)};
         return (Vector3){0};
     }
-    Vector3 vel = {
-        (cur.x - lastPos.x) / dt,
-        (cur.y - lastPos.y) / dt,
-        (cur.z - lastPos.z) / dt
-    };
+    float vx = (float)((cur.x - lastPos.x) / dt);
+    float vy = (float)((cur.y - lastPos.y) / dt);
+    float vz = (float)((cur.z - lastPos.z) / dt);
+    Vector3 vel = {vx, vy, vz};
     velCache[key] = @{@"pos": [NSValue valueWithBytes:&cur objCType:@encode(Vector3)], @"time": @(now)};
     return vel;
 }
@@ -328,27 +323,26 @@ static void checkKill() {
     lastKillCount = currentKill;
 }
 
-// ==================== 悬浮面板 ====================
-void closePanel() {
+static void closePanel() {
     if (settingsPanel) settingsPanel.hidden = YES;
 }
 
-void toggleAim(UISwitch *sw) {
+static void toggleAim(UISwitch *sw) {
     aimEnabled = sw.on;
     NSLog(@"[面板] 自瞄开关: %@", aimEnabled ? @"开" : @"关");
 }
 
-void fovChanged(UISlider *slider) {
+static void fovChanged(UISlider *slider) {
     userFov = slider.value;
     NSLog(@"[面板] FOV: %.0f", userFov);
 }
 
-void predChanged(UISlider *slider) {
+static void predChanged(UISlider *slider) {
     userPred = slider.value / 100.0;
     NSLog(@"[面板] 预判力度: %.0f%%", userPred * 100);
 }
 
-void showSettingsPanel() {
+static void showSettingsPanel() {
     if (!settingsPanel) {
         settingsPanel = [[UIView alloc] initWithFrame:CGRectMake(30, 120, SCREEN_WIDTH - 60, 280)];
         settingsPanel.backgroundColor = [UIColor colorWithWhite:0.1 alpha:0.92];
@@ -361,7 +355,7 @@ void showSettingsPanel() {
         [closeBtn setTitle:@"✕" forState:UIControlStateNormal];
         [closeBtn setTitleColor:[UIColor whiteColor] forState:UIControlStateNormal];
         closeBtn.titleLabel.font = [UIFont boldSystemFontOfSize:20];
-        [closeBtn addTarget:self action:@selector(closePanel) forControlEvents:UIControlEventTouchUpInside];
+        [closeBtn addTarget:closeBtn action:@selector(closePanelTapped) forControlEvents:UIControlEventTouchUpInside];
         [settingsPanel addSubview:closeBtn];
         
         UILabel *title = [[UILabel alloc] initWithFrame:CGRectMake(20, 20, 200, 30)];
@@ -370,7 +364,6 @@ void showSettingsPanel() {
         title.font = [UIFont boldSystemFontOfSize:18];
         [settingsPanel addSubview:title];
         
-        // 自瞄开关
         UILabel *aimLabel = [[UILabel alloc] initWithFrame:CGRectMake(20, 70, 100, 30)];
         aimLabel.text = @"自瞄开关";
         aimLabel.textColor = [UIColor whiteColor];
@@ -378,10 +371,9 @@ void showSettingsPanel() {
         
         aimSwitchControl = [[UISwitch alloc] initWithFrame:CGRectMake(settingsPanel.bounds.size.width - 80, 65, 50, 30)];
         aimSwitchControl.on = aimEnabled;
-        [aimSwitchControl addTarget:self action:@selector(toggleAim:) forControlEvents:UIControlEventValueChanged];
+        [aimSwitchControl addTarget:aimSwitchControl action:@selector(toggleAimTriggered:) forControlEvents:UIControlEventValueChanged];
         [settingsPanel addSubview:aimSwitchControl];
         
-        // FOV 滑块
         UILabel *fovLabel = [[UILabel alloc] initWithFrame:CGRectMake(20, 120, 150, 30)];
         fovLabel.text = @"自瞄范围 (FOV)";
         fovLabel.textColor = [UIColor whiteColor];
@@ -391,10 +383,9 @@ void showSettingsPanel() {
         fovSliderControl.minimumValue = 120;
         fovSliderControl.maximumValue = 320;
         fovSliderControl.value = userFov;
-        [fovSliderControl addTarget:self action:@selector(fovChanged:) forControlEvents:UIControlEventValueChanged];
+        [fovSliderControl addTarget:fovSliderControl action:@selector(fovChangedTriggered:) forControlEvents:UIControlEventValueChanged];
         [settingsPanel addSubview:fovSliderControl];
         
-        // 预判力度滑块
         UILabel *predLabel = [[UILabel alloc] initWithFrame:CGRectMake(20, 190, 150, 30)];
         predLabel.text = @"预判力度 (%)";
         predLabel.textColor = [UIColor whiteColor];
@@ -404,16 +395,43 @@ void showSettingsPanel() {
         predSliderControl.minimumValue = 70;
         predSliderControl.maximumValue = 100;
         predSliderControl.value = userPred * 100;
-        [predSliderControl addTarget:self action:@selector(predChanged:) forControlEvents:UIControlEventValueChanged];
+        [predSliderControl addTarget:predSliderControl action:@selector(predChangedTriggered:) forControlEvents:UIControlEventValueChanged];
         [settingsPanel addSubview:predSliderControl];
         
-        [[UIApplication sharedApplication].keyWindow addSubview:settingsPanel];
+        UIWindow *keyWindow = nil;
+        if (@available(iOS 13.0, *)) {
+            for (UIWindowScene *scene in [UIApplication sharedApplication].connectedScenes) {
+                if (scene.activationState == UISceneActivationStateForegroundActive) {
+                    keyWindow = scene.windows.firstObject;
+                    break;
+                }
+            }
+        } else {
+            keyWindow = [UIApplication sharedApplication].keyWindow;
+        }
+        [keyWindow addSubview:settingsPanel];
     } else {
         settingsPanel.hidden = NO;
     }
 }
 
-void floatButtonTapped() {
+static void closePanelTapped() {
+    closePanel();
+}
+
+static void toggleAimTriggered(UISwitch *sw) {
+    aimEnabled = sw.on;
+}
+
+static void fovChangedTriggered(UISlider *slider) {
+    userFov = slider.value;
+}
+
+static void predChangedTriggered(UISlider *slider) {
+    userPred = slider.value / 100.0;
+}
+
+static void floatButtonTapped() {
     if (settingsPanel && !settingsPanel.hidden) {
         closePanel();
     } else {
@@ -421,7 +439,7 @@ void floatButtonTapped() {
     }
 }
 
-void handlePan(UIPanGestureRecognizer *gesture) {
+static void handlePan(UIPanGestureRecognizer *gesture) {
     UIButton *btn = (UIButton *)gesture.view;
     CGPoint translation = [gesture translationInView:btn.superview];
     CGPoint newCenter = CGPointMake(btn.center.x + translation.x, btn.center.y + translation.y);
@@ -431,7 +449,7 @@ void handlePan(UIPanGestureRecognizer *gesture) {
     [gesture setTranslation:CGPointZero inView:btn.superview];
 }
 
-void setupFloatButton() {
+static void setupFloatButton() {
     dispatch_async(dispatch_get_main_queue(), ^{
         floatWindow = [[UIWindow alloc] initWithFrame:CGRectMake(SCREEN_WIDTH - 70, 150, 50, 50)];
         floatWindow.windowLevel = UIWindowLevelAlert + 2;
@@ -448,16 +466,15 @@ void setupFloatButton() {
         [floatButton setTitle:@"⚙" forState:UIControlStateNormal];
         [floatButton setTitleColor:[UIColor whiteColor] forState:UIControlStateNormal];
         floatButton.titleLabel.font = [UIFont systemFontOfSize:24];
-        [floatButton addTarget:self action:@selector(floatButtonTapped) forControlEvents:UIControlEventTouchUpInside];
+        [floatButton addTarget:floatButton action:@selector(floatButtonTapped) forControlEvents:UIControlEventTouchUpInside];
         
-        UIPanGestureRecognizer *pan = [[UIPanGestureRecognizer alloc] initWithTarget:self action:@selector(handlePan:)];
+        UIPanGestureRecognizer *pan = [[UIPanGestureRecognizer alloc] initWithTarget:floatButton action:@selector(handlePan:)];
         [floatButton addGestureRecognizer:pan];
         
         [floatWindow addSubview:floatButton];
     });
 }
 
-// ==================== 游戏内绘制 ====================
 @interface DrawView : UIView @end
 @implementation DrawView
 
@@ -529,7 +546,6 @@ void setupFloatButton() {
         CGContextStrokePath(ctx);
     }
     
-    // 左上角统计
     UIGraphicsBeginImageContext(CGSizeMake(130, 70));
     CGContextSetFillColorWithColor(ctx, [UIColor colorWithWhite:0 alpha:0.5].CGColor);
     CGContextFillRect(ctx, CGRectMake(0, 0, 130, 70));
@@ -559,7 +575,6 @@ static void setupUI() {
     });
 }
 
-// ==================== 入口 ====================
 %ctor {
     currentConfig = shotgunMode;
     NSLog(@"[Xyaim] 完整版加载成功");
