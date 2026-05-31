@@ -5,6 +5,6 @@ include $(THEOS)/makefiles/common.mk
 
 TWEAK_NAME = Xyaim
 Xyaim_FILES = Xyaim.xm
-Xyaim_CFLAGS = -fobjc-arc -Wno-arc-performSelector-leaks -Wno-unused-variable -Wno-unused-function
+Xyaim_CFLAGS = -fobjc-arc -Wno-arc-performSelector-leaks -Wno-error=unused-variable -Wno-error=c++11-narrowing
 
 include $(THEOS)/makefiles/tweak.mk
