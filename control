@@ -1,0 +1,9 @@
+Package: com.xiaoyi.xyaim
+Name: XyAim
+Version: 1.0.0
+Architecture: iphoneos-arm
+Description: XyAim 完整功能版
+Maintainer: 小逸
+Author: 小逸
+Section: Tweaks
+Depends: mobilesubstrate
