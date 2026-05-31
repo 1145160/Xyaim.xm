@@ -12,7 +12,9 @@ jobs:
           echo "$HOME/theos/bin" >> $GITHUB_PATH
           echo "THEOS=$HOME/theos" >> $GITHUB_ENV
       - name: Install ldid
-        run: brew install ldid
+        run: |
+          curl -Lo $HOME/theos/bin/ldid https://github.com/ProcursusTeam/ldid/releases/download/v2.1.5-procursus7/ldid_macosx_arm64
+          chmod +x $HOME/theos/bin/ldid
       - name: Build tweak
         run: |
           make package
