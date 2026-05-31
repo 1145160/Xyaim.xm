@@ -5,7 +5,6 @@ include $(THEOS)/makefiles/common.mk
 
 TWEAK_NAME = XyAim
 XyAim_FILES = XyAim.xm
-XyAim_CFLAGS = -fobjc-arc -fobjc-weak
-XyAim_FRAMEWORKS = UIKit CoreGraphics
+XyAim_CFLAGS = -fobjc-arc
 
 include $(THEOS)/makefiles/tweak.mk
