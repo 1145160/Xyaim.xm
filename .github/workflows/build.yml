@@ -1,4 +1,4 @@
-name: Build XyAim dylib
+name: Build Xyaim dylib
 on:
   workflow_dispatch:
 jobs:
@@ -11,11 +11,13 @@ jobs:
           git clone --recursive https://github.com/theos/theos.git $HOME/theos
           echo "$HOME/theos/bin" >> $GITHUB_PATH
           echo "THEOS=$HOME/theos" >> $GITHUB_ENV
+      - name: Install ldid
+        run: brew install ldid
       - name: Build tweak
         run: |
           make package
       - name: Upload deb
         uses: actions/upload-artifact@v4
         with:
-          name: XyAim.deb
+          name: Xyaim.deb
           path: packages/*.deb
