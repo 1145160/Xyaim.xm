@@ -4,10 +4,15 @@
 <dict>
     <key>Filter</key>
     <dict>
-        <key>Bundles</key>
+        <key>Executables</key>
         <array>
-            <string>com.tencent.超自然行动组</string>
+            <string>超自然行动组</string>
         </array>
+    </dict>
+    <key>XyAim</key>
+    <dict>
+        <key>Enabled</key>
+        <false/>
     </dict>
 </dict>
 </plist>
