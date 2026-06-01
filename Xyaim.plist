@@ -4,15 +4,10 @@
 <dict>
     <key>Filter</key>
     <dict>
-        <key>Executables</key>
+        <key>Bundles</key>
         <array>
-            <string>超自然行动组</string>
+            <string>com.pi.czrxdfirstly</string>
         </array>
-    </dict>
-    <key>XyAim</key>
-    <dict>
-        <key>Enabled</key>
-        <false/>
     </dict>
 </dict>
 </plist>
