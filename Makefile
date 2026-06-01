@@ -1,4 +1,3 @@
-export THEOS_PACKAGE_SCHEME = roothide
 ARCHS = arm64
 
 TARGET = iphone:clang:latest:14.0
@@ -10,4 +9,4 @@ TWEAK_NAME = Xyaim
 Xyaim_FILES = Xyaim.xm
 Xyaim_CFLAGS = -fobjc-arc -Wno-arc-performSelector-leaks -Wno-unused-variable -Wno-unused-function
 
-include $(THEOS)/makefiles/tweak.mk
+include $(THEOS)/makefiles/tweak.m
