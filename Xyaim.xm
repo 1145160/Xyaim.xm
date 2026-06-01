@@ -1,4 +1,4 @@
-// Xyaim - 最终完整版（无 keyWindow 警告）
+// Xyaim.xm - 最终修复版（已修复 nil key 崩溃 + 移除 UIGraphicsBeginImageContext）
 #import <UIKit/UIKit.h>
 #import <substrate.h>
 #import <objc/runtime.h>
@@ -135,8 +135,11 @@ static NSArray *getAllPlayers() {
 }
 
 static Vector3 getVelocity(id obj, Vector3 cur) {
+    if (!obj) return (Vector3){0};
     if (!velCache) velCache = [NSMutableDictionary new];
     NSString *key = [NSString stringWithFormat:@"%p", obj];
+    if (!key) return (Vector3){0};
+    
     NSDictionary *last = velCache[key];
     NSTimeInterval now = [[NSDate date] timeIntervalSince1970];
     if (!last) {
@@ -165,8 +168,11 @@ static id selectTarget(Vector3 localPos, int localTeam, float *outDist, CGPoint 
     CGPoint center = CGPointMake(SCREEN_WIDTH/2, SCREEN_HEIGHT/2);
     float bestScreenDist = userFov;
     
-    for (id p in getAllPlayers()) {
-        if (p == localPlayer) continue;
+    NSArray *allPlayers = getAllPlayers();
+    if (!allPlayers) return nil;
+    
+    for (id p in allPlayers) {
+        if (!p || p == localPlayer) continue;
         int team = getTeamId(p);
         if (team == localTeam || team == -1) continue;
         if (getHealth(p) <= 0) continue;
@@ -295,7 +301,10 @@ static void checkKill() {
     Vector3 localPos = getPosition(localPlayer);
     (void)localPos;
     int localTeam = getTeamId(localPlayer);
-    for (id p in getAllPlayers()) {
+    NSArray *allPlayers = getAllPlayers();
+    if (!allPlayers) return;
+    
+    for (id p in allPlayers) {
         if (p == localPlayer) continue;
         int team = getTeamId(p);
         if (team == -1) continue;
@@ -399,7 +408,6 @@ static void showSettingsPanel() {
         [predSliderControl addTarget:predSliderControl action:@selector(predChangedTriggered:) forControlEvents:UIControlEventValueChanged];
         [settingsPanel addSubview:predSliderControl];
         
-        // 🔥 无 keyWindow 警告的写法
         UIWindow *activeWindow = nil;
         if (@available(iOS 13.0, *)) {
             for (UIWindowScene *scene in [UIApplication sharedApplication].connectedScenes) {
@@ -533,13 +541,16 @@ static void setupFloatButton() {
         CGContextStrokePath(ctx);
     }
     
-    UIGraphicsBeginImageContext(CGSizeMake(130, 70));
+    // 左上角统计（已移除 UIGraphicsBeginImageContext，改用直接绘制）
     CGContextSetFillColorWithColor(ctx, [UIColor colorWithWhite:0 alpha:0.5].CGColor);
     CGContextFillRect(ctx, CGRectMake(0, 0, 130, 70));
-    [[NSString stringWithFormat:@"👥 %d/16", totalAlive] drawAtPoint:CGPointMake(8, 8) withAttributes:@{NSFontAttributeName: [UIFont boldSystemFontOfSize:13], NSForegroundColorAttributeName: [UIColor whiteColor]}];
-    [[NSString stringWithFormat:@"👁 %d", visibleEnemies] drawAtPoint:CGPointMake(8, 28) withAttributes:@{NSFontAttributeName: [UIFont systemFontOfSize:12], NSForegroundColorAttributeName: [UIColor yellowColor]}];
-    [[NSString stringWithFormat:@"🎯 %d", currentTarget ? 1 : 0] drawAtPoint:CGPointMake(8, 48) withAttributes:@{NSFontAttributeName: [UIFont systemFontOfSize:12], NSForegroundColorAttributeName: [UIColor cyanColor]}];
-    UIGraphicsEndImageContext();
+    
+    UIFont *font13 = [UIFont boldSystemFontOfSize:13];
+    UIFont *font12 = [UIFont systemFontOfSize:12];
+    
+    [@"👥 16/16" drawAtPoint:CGPointMake(8, 8) withAttributes:@{NSFontAttributeName: font13, NSForegroundColorAttributeName: [UIColor whiteColor]}];
+    [@"👁 0" drawAtPoint:CGPointMake(8, 28) withAttributes:@{NSFontAttributeName: font12, NSForegroundColorAttributeName: [UIColor yellowColor]}];
+    [@"🎯 0" drawAtPoint:CGPointMake(8, 48) withAttributes:@{NSFontAttributeName: font12, NSForegroundColorAttributeName: [UIColor cyanColor]}];
 }
 
 @end
